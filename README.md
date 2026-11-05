@@ -2,6 +2,8 @@
 
 AI assistant for learning Kazakhstan traffic rules. The product answers a learner's question in three layers: a short answer, a plain-language explanation, and a link to the exact official clause. The MVP must refuse to improvise when no reliable source is found.
 
+**Project planning baseline:** 29 October 2026. **Repository implementation published:** 5 November 2026.
+
 This repository turns the TSIS 4-7 project documents into an implementation. The current code covers the Sprint 1 foundation:
 
 - registration and token login;
