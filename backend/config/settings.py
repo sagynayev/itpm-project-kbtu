@@ -1,8 +1,10 @@
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIST = Path(os.getenv("FRONTEND_DIST", BASE_DIR / "frontend_dist"))
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-change-me")
 DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
@@ -27,6 +29,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -40,7 +43,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [FRONTEND_DIST],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -53,7 +56,33 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = "config.wsgi.application"
 
-if os.getenv("POSTGRES_HOST"):
+database_url = os.getenv("DATABASE_URL")
+
+if database_url:
+    parsed_database_url = urlparse(database_url)
+    if parsed_database_url.scheme not in {"postgres", "postgresql"}:
+        raise ValueError("DATABASE_URL must use the postgres or postgresql scheme")
+
+    query_options = parse_qs(parsed_database_url.query)
+    database_options = {
+        key: query_options[key][0]
+        for key in ("sslmode", "channel_binding")
+        if query_options.get(key)
+    }
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": parsed_database_url.path.lstrip("/"),
+            "USER": unquote(parsed_database_url.username or ""),
+            "PASSWORD": unquote(parsed_database_url.password or ""),
+            "HOST": parsed_database_url.hostname or "",
+            "PORT": str(parsed_database_url.port or 5432),
+            "OPTIONS": database_options,
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+        }
+    }
+elif os.getenv("POSTGRES_HOST"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
@@ -83,8 +112,9 @@ LANGUAGE_CODE = "ru-ru"
 TIME_ZONE = "Asia/Qyzylorda"
 USE_I18N = True
 USE_TZ = True
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+WHITENOISE_ROOT = FRONTEND_DIST
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -99,6 +129,12 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
 

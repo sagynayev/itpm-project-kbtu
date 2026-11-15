@@ -1,5 +1,7 @@
 # PDD Check
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sagynayev/itpm-project-kbtu)
+
 Помощник по ПДД Казахстана с проверяемым официальным источником.
 
 > Спросите как водитель. Проверьте как юрист.
@@ -11,6 +13,8 @@
 **Initial repository publication:** 5 November 2026.
 
 **Product-ready MVP update:** 15 November 2026.
+
+Бесплатный production-деплой подготовлен для Render + Neon. Краткая инструкция: [docs/deployment.md](docs/deployment.md).
 
 ## Что готово
 

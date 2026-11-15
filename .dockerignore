@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+.env
+**/__pycache__
+**/*.py[cod]
+**/node_modules
+frontend/dist
+backend/staticfiles
+backend/db.sqlite3
+data/import-report.json

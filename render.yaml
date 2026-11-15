@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: pdd-check-kbtu
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /api/health/
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DJANGO_SECURE_SSL
+        value: "true"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://*.onrender.com
+      - key: PDD_RETRIEVAL_MIN_SCORE
+        value: "0.34"
+      - key: WEB_CONCURRENCY
+        value: "2"
