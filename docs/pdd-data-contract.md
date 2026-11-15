@@ -1,5 +1,7 @@
 # Official PDD data contract
 
+Source of truth for the Russian MVP: Ministry of Internal Affairs Order No. 534 in the official Adilet system (`V2300033003`). The committed snapshot was synchronized on 15 November 2026 and reports an effective amendment date of 3 November 2026.
+
 The importer accepts UTF-8 JSON Lines: one JSON object per line.
 
 Required fields:

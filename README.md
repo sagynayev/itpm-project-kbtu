@@ -1,79 +1,112 @@
-# PDD ChatBot
+# PDD Check
 
-AI assistant for learning Kazakhstan traffic rules. The product answers a learner's question in three layers: a short answer, a plain-language explanation, and a link to the exact official clause. The MVP must refuse to improvise when no reliable source is found.
+Помощник по ПДД Казахстана с проверяемым официальным источником.
 
-**Project planning baseline:** 29 October 2026. **Repository implementation published:** 5 November 2026.
+> Спросите как водитель. Проверьте как юрист.
 
-This repository turns the TSIS 4-7 project documents into an implementation. The current code covers the Sprint 1 foundation:
+Пользователь описывает дорожную ситуацию своими словами, получает короткий ориентир и открывает точный фрагмент действующих ПДД в ИПС «Әділет». Если подтверждаемого источника нет, сервис возвращает `no_source`, а не придумывает ответ.
 
-- registration and token login;
-- storage and idempotent import of cleaned PDD clauses;
-- deterministic clause retrieval;
-- a documented JSON answer-service boundary;
-- a three-layer extractive fallback that never invents a rule;
-- question history and a React chat skeleton;
-- backend tests and GitHub Actions CI.
+**Project planning baseline:** 29 October 2026.
 
-The LLM and hallucination classifier are deliberately not hard-coded into the web layer. Alimzhan can replace the fallback behind the same answer-service interface during Sprint 2.
+**Initial repository publication:** 5 November 2026.
 
-## Team
+**Product-ready MVP update:** 15 November 2026.
 
-| Member | Main responsibility |
-|---|---|
-| Nurdos | PM / Product Owner, UI/UX, QA and scope control |
-| Alikhan | Django backend, database, authentication and React UI |
-| Alimzhan | PDD cleaning, retrieval, LLM/RAG, guardrail and evaluation |
+## Что готово
 
-## Run the backend
+- marketing landing с чётким позиционированием;
+- registration и token login;
+- профиль: имя, уровень, дата экзамена;
+- история вопросов;
+- retrieval по актуальному официальному тексту;
+- source-only grounding guardrail;
+- короткий ответ, контекст и раскрываемый официальный пункт;
+- feedback на ответы;
+- Django admin и guardrail logs;
+- автоматическая синхронизация ИПС «Әділет»;
+- JSONL snapshot: **883 фрагмента**, редакция **3 ноября 2026 года**;
+- адаптивный React UI;
+- tests, GitHub Actions и Docker Compose.
 
-Requires Python 3.12+.
+## Быстрый запуск через Docker
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+Открыть: `http://localhost:8080`. При старте backend применяет миграции и импортирует [официальный snapshot](data/pdd_official_ru.jsonl) в PostgreSQL.
+
+`docker compose config` проверен. Полную сборку образов нужно повторить на машине с запущенным Docker daemon.
+
+## Локальная разработка
+
+Backend — Python 3.12+:
 
 ```powershell
 cd backend
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
+py -m venv ..\.venv
+..\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 py manage.py migrate
+py manage.py import_pdd ..\data\pdd_official_ru.jsonl
 py manage.py runserver
 ```
 
-By default development uses SQLite. Set the `POSTGRES_*` variables from `.env.example` to use PostgreSQL.
-
-Import a cleaned JSONL file:
-
-```powershell
-py manage.py import_pdd ..\data\pdd_articles.jsonl --report ..\data\import-report.json
-```
-
-Each JSONL row must match [the data contract](docs/pdd-data-contract.md). Only a currently valid official source should be imported; the repository intentionally contains no invented legal clauses.
-
-## Run the frontend
-
-Requires Node.js 20+.
+Frontend — Node.js 20+:
 
 ```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-The app opens at `http://localhost:5173` and expects the API at `http://localhost:8000/api`.
+Для Vite development используется `VITE_API_URL=http://localhost:8000/api`.
 
-## Test
+Для production задайте сильные `DJANGO_SECRET_KEY`, `POSTGRES_PASSWORD`, домен в `DJANGO_ALLOWED_HOSTS` и включите `DJANGO_SECURE_SSL=true` за TLS reverse proxy.
+
+## Обновить официальный текст
+
+```powershell
+cd backend
+py manage.py sync_adilet --output ..\data\pdd_official_ru.jsonl
+```
+
+Команда загружает раздел «Правила дорожного движения» из официального акта МВД РК №534, сохраняет дату редакции, anchor, URL и SHA-256 каждого фрагмента. После синхронизации команда должна пройти ручную проверку 20 случайных записей.
+
+## Проверка
 
 ```powershell
 cd backend
 py manage.py test
+py manage.py check
+
+cd ..\frontend
+npm run build
+npm audit
 ```
 
-## Project documents
+## Команда
 
-- [TSIS 4-7 implementation map](docs/TSIS-4-7-summary-ru.md)
-- [Answer-service interface](docs/answer-service-interface.md)
-- [Official PDD data contract](docs/pdd-data-contract.md)
+| Участник | Ответственность |
+|---|---|
+| Nurdos | PM / Product Owner, UI/UX, QA и scope |
+| Alikhan | Django, PostgreSQL, authentication и React |
+| Alimzhan | PDD cleaning, retrieval, guardrail и evaluation |
+
+## Документы
+
+- [TSIS 4–7: что сделано](docs/TSIS-4-7-summary-ru.md)
+- [Brand & marketing](docs/brand-and-marketing.md)
+- [Demo script](docs/demo-script.md)
+- [Release checklist](docs/release-checklist.md)
+- [Usability test](docs/usability-test.md)
+- [Sprint status](docs/sprint-status.md)
+- [Evaluation set and baseline](evaluation/README.md)
+- [Answer-service contract](docs/answer-service-interface.md)
+- [PDD data contract](docs/pdd-data-contract.md)
 - [Definition of Done](docs/definition-of-done.md)
 
-## Current boundary
+## Ограничение MVP
 
-The current retrieval algorithm is a transparent baseline, not the final RAG model. It returns an official stored clause only when token overlap is high enough; otherwise it returns `no_source`. Sprint 2 should add embeddings/LLM generation, the configurable guardrail, regeneration (maximum two attempts), fallback to the official text, logging, and evaluation on at least 100 labeled answers.
-
+Retrieval и короткий ответ сейчас детерминированы: пользователю показывается только текст, который можно связать с сохранённым официальным фрагментом. Это безопасная база для последующей RAG-генерации, но не юридическая консультация. Перед реальным запуском нужны размеченные 100 ответов, метрики guardrail, usability test на пяти пользователях, production TLS и резервное копирование PostgreSQL.
