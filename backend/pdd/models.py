@@ -13,6 +13,7 @@ class LearnerProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="learner_profile",
     )
+    display_name = models.CharField(max_length=120, blank=True, default="")
     experience_level = models.CharField(
         max_length=20,
         choices=ExperienceLevel.choices,
@@ -104,5 +105,21 @@ class GuardrailLog(models.Model):
     risk_score = models.FloatField(null=True, blank=True)
     attempts = models.PositiveSmallIntegerField(default=1)
     ground_truth_label = models.BooleanField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class AnswerFeedback(models.Model):
+    answer = models.OneToOneField(
+        Answer,
+        on_delete=models.CASCADE,
+        related_name="feedback",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="answer_feedback",
+    )
+    helpful = models.BooleanField()
+    comment = models.CharField(max_length=500, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 

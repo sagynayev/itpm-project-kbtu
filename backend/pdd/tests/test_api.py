@@ -19,8 +19,8 @@ class QuestionAPITests(APITestCase):
         self.reference = LawReference.objects.create(
             article_number="demo-1",
             title="Приоритет на перекрёстке",
-            text="Демонстрационный текст для теста retrieval.",
-            source_url="https://example.test/demo-1",
+            text="Демонстрационный текст: приоритет на перекрёстке определяется тестовым пунктом.",
+            source_url="https://old.adilet.zan.kz/rus/docs/V2300033003#demo-1",
             last_updated=date(2026, 1, 1),
         )
 
@@ -34,7 +34,7 @@ class QuestionAPITests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["status"], "answered")
         self.assertEqual(response.data["official_clause"]["id"], self.reference.id)
-        self.assertEqual(response.data["guardrail"]["decision"], "not_evaluated")
+        self.assertEqual(response.data["guardrail"]["decision"], "allow")
 
     def test_unknown_question_returns_no_source(self):
         response = self.client.post(
@@ -56,4 +56,39 @@ class QuestionAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+    def test_profile_can_be_updated(self):
+        response = self.client.patch(
+            "/api/profile/",
+            {"display_name": "Алимжан", "experience_level": "intermediate"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["display_name"], "Алимжан")
+        self.assertEqual(response.data["experience_level"], "intermediate")
+
+    def test_user_can_rate_own_answer(self):
+        answer_response = self.client.post(
+            "/api/questions/",
+            {"question": "Как определяется приоритет на перекрёстке?"},
+            format="json",
+        )
+        response = self.client.post(
+            "/api/feedback/",
+            {"answer_id": answer_response.data["id"], "helpful": True, "comment": ""},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.data["helpful"])
+
+
+class PublicStatsTests(APITestCase):
+    def test_stats_are_public(self):
+        response = self.client.get("/api/public/stats/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["source"], "ИПС Әділет")
+        self.assertEqual(response.data["guardrail_mode"], "official-source-only")
 

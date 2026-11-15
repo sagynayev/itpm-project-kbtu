@@ -1,17 +1,20 @@
 from django.contrib.auth import authenticate
 from django.db import transaction
+from django.db.models import Max
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Answer, GuardrailLog, LearnerProfile, Question
+from .models import Answer, GuardrailLog, LawReference, LearnerProfile, Question
 from .serializers import (
     AnswerSerializer,
+    AnswerFeedbackSerializer,
     AskQuestionSerializer,
     QuestionHistorySerializer,
     RegisterSerializer,
+    LearnerProfileSerializer,
 )
 from .services.answer_service import AnswerRequest, ExtractiveAnswerService
 
@@ -21,6 +24,22 @@ class HealthAPIView(APIView):
 
     def get(self, request):
         return Response({"status": "ok"})
+
+
+class PublicStatsAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        references = LawReference.objects.all()
+        return Response(
+            {
+                "clauses": references.count(),
+                "source": "ИПС Әділет",
+                "source_url": "https://old.adilet.zan.kz/rus/docs/V2300033003",
+                "last_updated": references.aggregate(value=Max("last_updated"))["value"],
+                "guardrail_mode": "official-source-only",
+            }
+        )
 
 
 class RegisterAPIView(APIView):
@@ -47,6 +66,27 @@ class LoginAPIView(APIView):
             return Response({"detail": "Invalid credentials."}, status=status.HTTP_400_BAD_REQUEST)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({"token": token.key, "username": user.username})
+
+
+class ProfileAPIView(APIView):
+    def get(self, request):
+        profile, _ = LearnerProfile.objects.get_or_create(user=request.user)
+        return Response(LearnerProfileSerializer(profile).data)
+
+    def patch(self, request):
+        profile, _ = LearnerProfile.objects.get_or_create(user=request.user)
+        serializer = LearnerProfileSerializer(profile, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class AnswerFeedbackAPIView(APIView):
+    def post(self, request):
+        serializer = AnswerFeedbackSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class QuestionAPIView(APIView):

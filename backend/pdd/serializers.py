@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Answer, LawReference, LearnerProfile, Question
+from .models import Answer, AnswerFeedback, LawReference, LearnerProfile, Question
 
 
 User = get_user_model()
@@ -21,6 +21,15 @@ class RegisterSerializer(serializers.Serializer):
         user = User.objects.create_user(**validated_data)
         LearnerProfile.objects.create(user=user)
         return user
+
+
+class LearnerProfileSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source="user.username", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = LearnerProfile
+        fields = ("username", "email", "display_name", "experience_level", "exam_date")
 
 
 class LawReferenceSerializer(serializers.ModelSerializer):
@@ -48,6 +57,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
         fields = (
+            "id",
             "status",
             "short_answer",
             "explanation",
@@ -73,4 +83,32 @@ class QuestionHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = ("id", "text", "created_at", "answer")
+
+
+class AnswerFeedbackSerializer(serializers.ModelSerializer):
+    answer_id = serializers.PrimaryKeyRelatedField(
+        source="answer",
+        queryset=Answer.objects.all(),
+    )
+
+    class Meta:
+        model = AnswerFeedback
+        fields = ("answer_id", "helpful", "comment")
+
+    def validate_answer_id(self, answer):
+        request = self.context["request"]
+        if answer.question.user_id != request.user.id:
+            raise serializers.ValidationError("You can rate only your own answer.")
+        return answer
+
+    def create(self, validated_data):
+        feedback, _ = AnswerFeedback.objects.update_or_create(
+            answer=validated_data["answer"],
+            defaults={
+                "user": self.context["request"].user,
+                "helpful": validated_data["helpful"],
+                "comment": validated_data.get("comment", ""),
+            },
+        )
+        return feedback
 

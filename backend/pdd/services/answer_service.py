@@ -4,6 +4,7 @@ from typing import Protocol
 from django.conf import settings
 
 from pdd.models import LawReference
+from pdd.services.guardrail import GroundingGuardrail
 from pdd.services.retrieval import rank_references
 
 
@@ -45,14 +46,36 @@ class ExtractiveAnswerService:
             )
 
         match = matches[0]
+        short_answer = self._short_answer(match.reference.text)
+        guardrail = GroundingGuardrail().evaluate(short_answer, match.reference)
+        if guardrail.decision == "block":
+            return AnswerResult(
+                status="blocked",
+                short_answer="",
+                explanation="Ответ заблокирован: не удалось подтвердить его официальным источником.",
+                official_clause=match.reference,
+                retrieval_score=match.score,
+                guardrail_decision="block",
+                guardrail_risk_score=guardrail.risk_score,
+            )
         return AnswerResult(
             status="answered",
-            short_answer=match.reference.text,
+            short_answer=short_answer,
             explanation=(
-                "Это предварительный ответ без генерации: показан наиболее релевантный "
-                "официальный пункт. Сверьте его с источником по ссылке."
+                f"Найден пункт из раздела «{match.reference.title}». "
+                "Ниже приведена официальная формулировка без пересказа модели."
             ),
             official_clause=match.reference,
             retrieval_score=match.score,
+            guardrail_decision="allow",
+            guardrail_risk_score=guardrail.risk_score,
         )
+
+    @staticmethod
+    def _short_answer(text: str) -> str:
+        sentences = [part.strip() for part in text.replace("\n", " ").split(".") if part.strip()]
+        short = ". ".join(sentences[:2])
+        if short and not short.endswith("."):
+            short += "."
+        return short[:420]
 

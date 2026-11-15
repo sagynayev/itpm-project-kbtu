@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Answer, GuardrailLog, LawReference, LearnerProfile, Question
+from .models import Answer, AnswerFeedback, GuardrailLog, LawReference, LearnerProfile, Question
 
 
 @admin.register(LawReference)
@@ -14,4 +14,5 @@ admin.site.register(LearnerProfile)
 admin.site.register(Question)
 admin.site.register(Answer)
 admin.site.register(GuardrailLog)
+admin.site.register(AnswerFeedback)
 
