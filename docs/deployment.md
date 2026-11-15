@@ -2,6 +2,8 @@
 
 Production-схема состоит из одного Render Web Service и одной базы Neon PostgreSQL. React и Django работают на одном домене, поэтому отдельный CORS и второй сервер не нужны.
 
+**Рабочий production:** [https://pdd-check-kbtu.onrender.com](https://pdd-check-kbtu.onrender.com)
+
 ## 1. Создать базу Neon
 
 1. Открыть [Neon Console](https://console.neon.tech/) и создать бесплатный проект `pdd-check`.

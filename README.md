@@ -2,6 +2,8 @@
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/sagynayev/itpm-project-kbtu)
 
+**Production:** [pdd-check-kbtu.onrender.com](https://pdd-check-kbtu.onrender.com)
+
 Помощник по ПДД Казахстана с проверяемым официальным источником.
 
 > Спросите как водитель. Проверьте как юрист.
